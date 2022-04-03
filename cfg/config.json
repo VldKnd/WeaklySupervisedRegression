@@ -1,0 +1,23 @@
+{
+  "lbl": "train_4_standard_best",
+  "desc": "predicts point of size 4 from standard scaled train data",
+  "data_suffix": "_standard",
+  "z_dim": 256,
+  "gen_dims": [128, 32, 8, 4],
+  "disc_dims": [4, 128, 32, 8],
+  "num_epochs": 40,
+  "betas": [0, 0.99],
+  "lr": 1e-3,
+  "batch_size": 746,
+  "w_gp": 10,
+  "w_eps": 1e-3,
+  "display_freq": 10,
+  "metrics_freq": 10,
+  "seed": 5051,
+  "device": "cuda",
+  "num_pred_rows": 410,
+  "num_reps": 10000,
+  "finetune": true,
+  "from_ckpt": true,
+  "from_epoch": 2
+}
