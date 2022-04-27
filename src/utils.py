@@ -5,6 +5,7 @@ import torch
 import random
 import numpy as np
 
+import matplotlib.pyplot as plt
 
 def root_dir():
     return (Path(__file__) / '..' / '..').resolve()
@@ -95,7 +96,29 @@ def load_ckpt(epoch, nets, optims, cfg, best_name=None):
     if optimD: optimD.load_state_dict(state_dict['optimD'])
     return state_dict['epoch'], [netG, netD], [optimG, optimD], state_dict['best_metrics']
 
+def plot_losses(losses, names):
+    plt.figure(figsize=(15, 15))
+    ax1 = plt.subplot(221)
+    ax2 = plt.subplot(222)
+    ax3 = plt.subplot(223)
+    ax4 = plt.subplot(224)
 
+    ax1.set_title(names[0])
+    ax1.plot(losses[0])
+
+    ax2.set_title(names[1])
+    ax2.plot(losses[1])
+
+    ax3.set_title(names[2])
+    ax3.plot(losses[2], label="Train") 
+    ax3.plot(losses[4], label="Test")
+    ax3.legend()
+
+    ax4.set_title(names[3])
+    ax4.plot(losses[3])
+
+    plt.show()
+    
 class AverageMeter:
     def __init__(self):
         self.reset()
