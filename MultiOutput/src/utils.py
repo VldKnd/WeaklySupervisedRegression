@@ -18,3 +18,17 @@ def tril_inv(L):
     _S = np.zeros((shape, shape))
     _S[np.tril_indices(shape)] = L
     return _S
+
+def get_statistics(A_train, L_train, A_s_train, L_s_train,
+                   A_weak, L_weak, A_s_weak, L_s_weak,
+                   A_test, L_test, A_s_test, L_s_test):
+    print("L2")
+    print("Train L2 {:.5f}".format((np.linalg.norm(A_train - A_s_train, axis=1)**2).mean()))
+    print("Weak L2 {:.5f}".format((np.linalg.norm(A_weak - A_s_weak, axis=1)**2).mean()))
+    print("Test L2 {:.5f}".format((np.linalg.norm(A_test - A_s_test, axis=1)**2).mean()), end="\n\n")
+
+    print("MWD")
+    print("Train L2 {:.5f}".format(get_Wasserstain(A_train, L_train, A_s_train, L_s_train)))
+    print("Weak L2 {:.5f}".format(get_Wasserstain(A_weak, L_weak, A_s_weak, L_s_weak)))
+    print("Test L2 {:.5f}".format(get_Wasserstain(A_test, L_test, A_s_test, L_s_test)))
+    
