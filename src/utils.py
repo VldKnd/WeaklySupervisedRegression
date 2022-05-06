@@ -1,138 +1,34 @@
-import pickle
-from pathlib import Path
-
-import torch
-import random
+import math
 import numpy as np
 
-import matplotlib.pyplot as plt
+def get_Wasserstain(A, L, A_star, L_star):
+    get_S = lambda x: x@x.T
+    L_m = np.stack([tril_inv(L[i]) for i in range(L.shape[0])])
+    L_star_m = np.stack([tril_inv(L_star[i]) for i in range(L_star.shape[0])])
+    return np.mean(
+        np.linalg.norm(A-A_star, ord=2, axis=1)**2+
+        np.linalg.norm(L_m-L_star_m, ord="fro", axis=(1, 2))**2
+    )
 
-def root_dir():
-    return (Path(__file__) / '..' / '..').resolve()
+def get_shape(n):
+    return int((-1+math.sqrt(1 + 8*n))/2)
 
+def tril_inv(L):
+    shape = get_shape(len(L))
+    _S = np.zeros((shape, shape))
+    _S[np.tril_indices(shape)] = L
+    return _S
 
-def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
+def get_statistics(A_train, L_train, A_s_train, L_s_train,
+                   A_weak, L_weak, A_s_weak, L_s_weak,
+                   A_test, L_test, A_s_test, L_s_test):
+    print("L2")
+    print("Train L2 {:.5f}".format((np.linalg.norm(A_train - A_s_train, axis=1)**2).mean()))
+    print("Weak L2 {:.5f}".format((np.linalg.norm(A_weak - A_s_weak, axis=1)**2).mean()))
+    print("Test L2 {:.5f}".format((np.linalg.norm(A_test - A_s_test, axis=1)**2).mean()), end="\n\n")
 
-
-def print_cfg_info(cfg):
-    print('*--- config info ---*')
-    print('config name:', cfg['lbl'])
-    print('config description:', cfg['desc'])
-    print('batch size:', cfg['batch_size'])
-    print('device:', cfg['device'])
-    print('noise size:', cfg['z_dim'])
-    print('generator dimensions:', cfg['gen_dims'])
-    print('discriminator dimensions:', cfg['disc_dims'])
-    print('from epoch:', cfg['from_epoch'] if cfg['from_ckpt'] else 0)
-    print('number of epochs:', cfg['num_epochs'])
-    print('*-------------------*')
-
-
-def load_data_scaler(cfg):
-    if cfg['data_suffix'] == '_standard':
-        with open(root_dir() / 'data/standard_scaler.pickle', 'rb') as fp:
-            return pickle.load(fp)
-    return None
-
-
-def create_meters(names):
-    return {n: AverageMeter() for n in names}
-
-
-def log_meters(logger, meters, step):
-    for k, m in meters.items():
-        if m.avg != 0:
-            logger.add_scalar(k, m.avg, step)
-
-
-def reset_meters(meters):
-    for m in meters.values():
-        m.reset()
-
-
-def state_dict2cpu(obj):
-    state_dict = obj.state_dict()
-    for k, v in state_dict.items():
-        state_dict[k] = v.cpu()
-    return state_dict
-
-
-def save_ckpt(epoch, nets, optims, cfg, best_metrics: dict = None, best_name: str = None, net_vars=None):
-    netG, netD = nets
-    optimG, optimD = optims
-    state_dict = {
-        'cfg': cfg,
-        'epoch': epoch,
-        'net_vars': net_vars,
-        'best_metrics': best_metrics,
-        'netG': state_dict2cpu(netG),
-        'netD': state_dict2cpu(netD),
-        'optimG': optimG.state_dict(),
-        'optimD': optimD.state_dict(),
-    }
-    if best_name is None:
-        dst = root_dir() / f'ckpt/{cfg["lbl"]}/{cfg["lbl"]}_{epoch}.pth.tar'
-    else:
-        dst = root_dir() / f'ckpt/{cfg["lbl"]}/{best_name}.pth.tar'
-    torch.save(state_dict, dst)
-
-
-def load_ckpt(epoch, nets, optims, cfg, best_name=None):
-    netG, netD = nets
-    optimG, optimD = optims
-    if best_name is None:
-        src = root_dir() / f'ckpt/{cfg["lbl"]}/{cfg["lbl"]}_{epoch}.pth.tar'
-    else:
-        src = root_dir() / f'ckpt/{cfg["lbl"]}/{best_name}.pth.tar'
-    state_dict = torch.load(src, map_location='cpu')
-    if netG:
-        netG.load_state_dict(state_dict['netG'])
-    if netD:
-        netD.load_state_dict(state_dict['netD'])
-    if optimG: optimG.load_state_dict(state_dict['optimG'])
-    if optimD: optimD.load_state_dict(state_dict['optimD'])
-    return state_dict['epoch'], [netG, netD], [optimG, optimD], state_dict['best_metrics']
-
-def plot_losses(losses, names):
-    plt.figure(figsize=(15, 15))
-    ax1 = plt.subplot(221)
-    ax2 = plt.subplot(222)
-    ax3 = plt.subplot(223)
-    ax4 = plt.subplot(224)
-
-    ax1.set_title(names[0])
-    ax1.plot(losses[0])
-
-    ax2.set_title(names[1])
-    ax2.plot(losses[1])
-
-    ax3.set_title(names[2])
-    ax3.plot(losses[2], label="Train") 
-    ax3.plot(losses[4], label="Test")
-    ax3.legend()
-
-    ax4.set_title(names[3])
-    ax4.plot(losses[3])
-
-    plt.show()
+    print("MWD")
+    print("Train L2 {:.5f}".format(get_Wasserstain(A_train, L_train, A_s_train, L_s_train)))
+    print("Weak L2 {:.5f}".format(get_Wasserstain(A_weak, L_weak, A_s_weak, L_s_weak)))
+    print("Test L2 {:.5f}".format(get_Wasserstain(A_test, L_test, A_s_test, L_s_test)))
     
-class AverageMeter:
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-        return self
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-        return self
