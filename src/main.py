@@ -13,7 +13,6 @@ def get_W_k_means(X, n_clusters = 4, n_models = 4, verbose=False):
     for i in range(n_models):
         if verbose:
             print(i+1, end=" ")
-        #models[i].fit(X)
         pred = models[i].fit_predict(X)
         W += ((pred[:, None] - pred[None,: ]) == 0).astype(int)
         
